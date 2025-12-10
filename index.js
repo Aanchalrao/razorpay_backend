@@ -9,24 +9,22 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Razorpay object
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
 });
 
-// Create Order API
+// Create Order
 app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
 
-    const options = {
+    const order = await razorpay.orders.create({
       amount: amount * 100,
       currency: "INR",
       receipt: "order_" + Date.now(),
-    };
+    });
 
-    const order = await razorpay.orders.create(options);
     res.json({
       success: true,
       orderId: order.id,
@@ -38,28 +36,19 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-// Payment Verification API
-app.post("/verify", async (req, res) => {
-  try {
-    const { orderId, paymentId, signature } = req.body;
+// Verify Payment Signature
+app.post("/verify", (req, res) => {
+  const { orderId, paymentId, signature } = req.body;
 
-    const hash = crypto
-      .createHmac("sha256", process.env.RAZORPAY_SECRET)
-      .update(orderId + "|" + paymentId)
-      .digest("hex");
+  const hash = crypto
+    .createHmac("sha256", process.env.RAZORPAY_SECRET)
+    .update(orderId + "|" + paymentId)
+    .digest("hex");
 
-    if (hash === signature) {
-      return res.json({ success: true });
-    }
-    res.json({ success: false });
-  } catch (err) {
-    res.json({ success: false, message: err.message });
-  }
+  if (hash === signature) return res.json({ success: true });
+
+  res.json({ success: false });
 });
 
-app.get("/", (req, res) => {
-  res.send("Razorpay Backend Running Successfully 🚀");
-});
-
-// Start server
-app.listen(3000, () => console.log("Server Running on port 3000"));
+app.get("/", (req, res) => res.send("Razorpayyyyyy Backend Running 🚀"));
+app.listen(3000, () => console.log("Server Running at 3000"));
